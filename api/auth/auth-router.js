@@ -1,8 +1,22 @@
 const router = require("express").Router();
-const { usernameVarmi, rolAdiGecerlimi } = require('./auth-middleware');
+const { usernameVarmi, rolAdiGecerlimi } = require("./auth-middleware");
 const { JWT_SECRET } = require("../secrets"); // bu secret'ı kullanın!
+const bcrypt = require("bcryptjs");
+const userModel = require("../users/users-model");
+const jwt = require("jsonwebtoken");
 
-router.post("/register", rolAdiGecerlimi, (req, res, next) => {
+router.post("/register", rolAdiGecerlimi, async (req, res, next) => {
+  try {
+    const userEntity = {
+      username: req.body.username,
+      password: req.body.password,
+      role_name: req.body.role_name,
+    };
+    const insertedUser = await userModel.ekle(userEntity);
+    res.status(201).json(insertedUser);
+  } catch (error) {
+    next(error);
+  }
   /**
     [POST] /api/auth/register { "username": "anna", "password": "1234", "role_name": "angel" }
 
@@ -16,8 +30,26 @@ router.post("/register", rolAdiGecerlimi, (req, res, next) => {
    */
 });
 
+router.post("/login", usernameVarmi, async (req, res, next) => {
+  try {
+    let token = jwt.sign(
+      {
+        subject: req.user.user_id,
+        username: req.user.username,
+        role_name: req.user.role_name,
+      },
+      JWT_SECRET,
+      { expiresIn: "1d" }
+    );
 
-router.post("/login", usernameVarmi, (req, res, next) => {
+    res.status(200).json({
+      message: `${req.user.username} geri geldi!`,
+      token: token,
+    });
+  } catch (error) {
+    next(error);
+  }
+
   /**
     [POST] /api/auth/login { "username": "sue", "password": "1234" }
 
